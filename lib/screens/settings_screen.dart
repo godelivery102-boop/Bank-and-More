@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../app.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -116,6 +117,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('Order Express'),
                     value: _settings.showOrderExpress,
                     onChanged: (value) => setState(() => _settings = _settings.copyWith(showOrderExpress: value)),
+                  ),
+                  SwitchListTile(
+                    title: const Text('جميع السجلات'),
+                    value: _settings.showAllRecords,
+                    onChanged: (value) => setState(() => _settings = _settings.copyWith(showAllRecords: value)),
                   ),
                   SwitchListTile(
                     title: const Text('الجرد'),

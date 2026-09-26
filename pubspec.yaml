@@ -1,6 +1,6 @@
 name: bank_and_more
 
-description: Bank and More app for delivery request tracking, dashboard, inventory, and admin settings.
+description: Bank and More app for managing delivery requests, reports, inventory, and flexible admin settings.
 
 publish_to: 'none'
 
@@ -17,6 +17,9 @@ dependencies:
   shared_preferences: ^2.3.1
   fl_chart: ^0.68.0
 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^4.0.0
 
 flutter:

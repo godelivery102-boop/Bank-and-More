@@ -9,6 +9,7 @@ class AppSettings {
     this.showDashboard = true,
     this.showLocation = true,
     this.showOrderExpress = true,
+    this.showAllRecords = true,
     this.showInventory = true,
     this.showSettings = true,
   });
@@ -22,6 +23,7 @@ class AppSettings {
   final bool showDashboard;
   final bool showLocation;
   final bool showOrderExpress;
+  final bool showAllRecords;
   final bool showInventory;
   final bool showSettings;
 
@@ -35,6 +37,7 @@ class AppSettings {
     bool? showDashboard,
     bool? showLocation,
     bool? showOrderExpress,
+    bool? showAllRecords,
     bool? showInventory,
     bool? showSettings,
   }) {
@@ -48,6 +51,7 @@ class AppSettings {
       showDashboard: showDashboard ?? this.showDashboard,
       showLocation: showLocation ?? this.showLocation,
       showOrderExpress: showOrderExpress ?? this.showOrderExpress,
+      showAllRecords: showAllRecords ?? this.showAllRecords,
       showInventory: showInventory ?? this.showInventory,
       showSettings: showSettings ?? this.showSettings,
     );
@@ -63,6 +67,7 @@ class AppSettings {
         'showDashboard': showDashboard,
         'showLocation': showLocation,
         'showOrderExpress': showOrderExpress,
+        'showAllRecords': showAllRecords,
         'showInventory': showInventory,
         'showSettings': showSettings,
       };
@@ -78,6 +83,7 @@ class AppSettings {
       showDashboard: json['showDashboard'] ?? true,
       showLocation: json['showLocation'] ?? true,
       showOrderExpress: json['showOrderExpress'] ?? true,
+      showAllRecords: json['showAllRecords'] ?? true,
       showInventory: json['showInventory'] ?? true,
       showSettings: json['showSettings'] ?? true,
     );

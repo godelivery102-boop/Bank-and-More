@@ -26,4 +26,20 @@ class GoogleSheetsService {
     debugPrint('Google Sheets sync request prepared: $payload');
     return true;
   }
+
+  Future<bool> syncAllData({
+    required List<LocationRecord> locationRecords,
+    required List<OrderExpressRecord> orderRecords,
+  }) async {
+    final payload = jsonEncode({
+      'sheet': 'bank_and_more_all',
+      'location_count': locationRecords.length,
+      'order_count': orderRecords.length,
+      'location_records': locationRecords.map((record) => record.toJson()).toList(),
+      'order_records': orderRecords.map((record) => record.toJson()).toList(),
+    });
+
+    debugPrint('Google Sheets full sync payload prepared: $payload');
+    return true;
+  }
 }

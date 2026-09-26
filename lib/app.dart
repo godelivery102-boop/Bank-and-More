@@ -6,6 +6,7 @@ import 'models/app_settings.dart';
 import 'models/location_record.dart';
 import 'models/order_express_record.dart';
 import 'models/inventory_item.dart';
+import 'screens/all_records_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/location_screen.dart';
 import 'screens/order_express_screen.dart';
@@ -163,6 +164,7 @@ class _HomeShellState extends State<HomeShell> {
       if (widget.settings.showDashboard) const DashboardScreen(),
       if (widget.settings.showLocation) const LocationScreen(),
       if (widget.settings.showOrderExpress) const OrderExpressScreen(),
+      if (widget.settings.showAllRecords) const AllRecordsScreen(),
       if (widget.settings.showInventory) const InventoryScreen(),
       if (widget.settings.showSettings) const SettingsScreen(),
     ];
@@ -174,6 +176,8 @@ class _HomeShellState extends State<HomeShell> {
         const NavigationDestination(icon: Icon(Icons.location_on_outlined), label: 'Location'),
       if (widget.settings.showOrderExpress)
         const NavigationDestination(icon: Icon(Icons.local_shipping_outlined), label: 'Order Express'),
+      if (widget.settings.showAllRecords)
+        const NavigationDestination(icon: Icon(Icons.list_alt_outlined), label: 'جميع السجلات'),
       if (widget.settings.showInventory)
         const NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'الجرد'),
       if (widget.settings.showSettings)
