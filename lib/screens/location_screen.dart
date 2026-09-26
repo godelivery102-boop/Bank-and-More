@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/location_record.dart';
-import '../models/order_express_record.dart';
 
 class LocationScreen extends StatefulWidget {
   const LocationScreen({super.key});
@@ -21,6 +20,8 @@ class _LocationScreenState extends State<LocationScreen> {
   final _amountController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   List<LocationRecord> _records = [];
+  String _searchQuery = '';
+  String? _editingId;
 
   @override
   void initState() {
@@ -30,18 +31,42 @@ class _LocationScreenState extends State<LocationScreen> {
 
   Future<void> _load() async {
     final records = LocalStorage.loadLocationRecords();
-    setState(() {
-      _records = records;
-    });
+    setState(() => _records = records);
+  }
+
+  List<LocationRecord> get filteredRecords {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return _records;
+
+    return _records.where((record) {
+      final haystack = [
+        record.captainName,
+        record.account,
+        record.customerName,
+        record.location,
+        record.formattedDate,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList();
   }
 
   double get totalAmount => _records.fold(0.0, (sum, item) => sum + item.amount);
+
+  void _resetForm() {
+    _editingId = null;
+    _selectedDate = DateTime.now();
+    _captainController.clear();
+    _accountController.clear();
+    _customerController.clear();
+    _locationController.clear();
+    _amountController.clear();
+  }
 
   Future<void> _saveRecord() async {
     if (!_formKey.currentState!.validate()) return;
 
     final record = LocationRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: _editingId ?? DateTime.now().millisecondsSinceEpoch.toString(),
       date: _selectedDate,
       captainName: _captainController.text.trim(),
       account: _accountController.text.trim(),
@@ -51,19 +76,40 @@ class _LocationScreenState extends State<LocationScreen> {
       createdAt: DateTime.now(),
     );
 
-    final list = List<LocationRecord>.from(_records)..add(record);
+    final list = List<LocationRecord>.from(_records);
+    if (_editingId != null) {
+      final index = list.indexWhere((item) => item.id == _editingId);
+      if (index >= 0) {
+        list[index] = record;
+      }
+    } else {
+      list.add(record);
+    }
+
     await LocalStorage.saveLocationRecords(list);
     setState(() {
       _records = list;
-      _captainController.clear();
-      _accountController.clear();
-      _customerController.clear();
-      _locationController.clear();
-      _amountController.clear();
+      _resetForm();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ بيانات Location بنجاح')),
+      SnackBar(
+        content: Text(_editingId == null
+            ? 'تم حفظ بيانات Location بنجاح'
+            : 'تم تحديث بيانات Location بنجاح'),
+      ),
     );
+  }
+
+  void _editRecord(LocationRecord record) {
+    setState(() {
+      _editingId = record.id;
+      _selectedDate = record.date;
+      _captainController.text = record.captainName;
+      _accountController.text = record.account;
+      _customerController.text = record.customerName;
+      _locationController.text = record.location;
+      _amountController.text = record.amount.toString();
+    });
   }
 
   Future<void> _deleteRecord(String id) async {
@@ -71,6 +117,7 @@ class _LocationScreenState extends State<LocationScreen> {
     await LocalStorage.saveLocationRecords(updated);
     setState(() {
       _records = updated;
+      if (_editingId == id) _resetForm();
     });
   }
 
@@ -149,13 +196,26 @@ class _LocationScreenState extends State<LocationScreen> {
                       ],
                     ),
                     const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _saveRecord,
-                        icon: const Icon(Icons.save_alt),
-                        label: const Text('حفظ'),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _saveRecord,
+                            icon: Icon(_editingId == null ? Icons.save_alt : Icons.edit),
+                            label: Text(_editingId == null ? 'حفظ' : 'تحديث'),
+                          ),
+                        ),
+                        if (_editingId != null) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _resetForm,
+                              icon: const Icon(Icons.close),
+                              label: const Text('إلغاء'),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -173,22 +233,38 @@ class _LocationScreenState extends State<LocationScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ..._records.map((record) => Card(
+          TextField(
+            decoration: const InputDecoration(
+              labelText: 'بحث',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) => setState(() => _searchQuery = value),
+          ),
+          const SizedBox(height: 12),
+          ...filteredRecords.map((record) => Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   title: Text(record.customerName),
                   subtitle: Text(
                     '${record.formattedDate} • ${record.captainName} • ${record.location}',
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(NumberFormat.currency(symbol: 'SAR ', decimalDigits: 2).format(record.amount)),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () => _deleteRecord(record.id),
-                      ),
-                    ],
+                  trailing: SizedBox(
+                    width: 120,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(NumberFormat.currency(symbol: 'SAR ', decimalDigits: 2).format(record.amount)),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                          onPressed: () => _editRecord(record),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteRecord(record.id),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               )),
@@ -219,9 +295,7 @@ class _DateField extends StatelessWidget {
           firstDate: DateTime(2020),
           lastDate: DateTime(2100),
         );
-        if (date != null) {
-          onChanged(date);
-        }
+        if (date != null) onChanged(date);
       },
       child: InputDecorator(
         decoration: InputDecoration(labelText: label),

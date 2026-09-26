@@ -24,6 +24,8 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   List<OrderExpressRecord> _records = [];
+  String _searchQuery = '';
+  String? _editingId;
 
   @override
   void initState() {
@@ -36,7 +38,38 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
     setState(() => _records = records);
   }
 
+  List<OrderExpressRecord> get filteredRecords {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return _records;
+
+    return _records.where((record) {
+      final haystack = [
+        record.company,
+        record.customerName,
+        record.driverName,
+        record.location,
+        record.note,
+        record.formattedDate,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+  }
+
   double get totalAmount => _records.fold(0.0, (sum, item) => sum + item.total);
+
+  void _resetForm() {
+    _editingId = null;
+    _selectedDate = DateTime.now();
+    _companyController.clear();
+    _customerController.clear();
+    _driverController.clear();
+    _qtyController.text = '1';
+    _orderValueController.clear();
+    _coController.clear();
+    _driverValueController.clear();
+    _locationController.clear();
+    _noteController.clear();
+  }
 
   Future<void> _saveRecord() async {
     if (!_formKey.currentState!.validate()) return;
@@ -45,10 +78,10 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
     final orderValue = double.tryParse(_orderValueController.text.trim()) ?? 0;
     final co = double.tryParse(_coController.text.trim()) ?? 0;
     final driverValue = double.tryParse(_driverValueController.text.trim()) ?? 0;
-    final calculatedTotal = (orderValue + co + driverValue);
+    final calculatedTotal = orderValue + co + driverValue;
 
     final record = OrderExpressRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: _editingId ?? DateTime.now().millisecondsSinceEpoch.toString(),
       date: _selectedDate,
       company: _companyController.text.trim(),
       customerName: _customerController.text.trim(),
@@ -63,29 +96,53 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
       createdAt: DateTime.now(),
     );
 
-    final list = List<OrderExpressRecord>.from(_records)..add(record);
+    final list = List<OrderExpressRecord>.from(_records);
+    if (_editingId != null) {
+      final index = list.indexWhere((item) => item.id == _editingId);
+      if (index >= 0) {
+        list[index] = record;
+      }
+    } else {
+      list.add(record);
+    }
+
     await LocalStorage.saveOrderRecords(list);
     setState(() {
       _records = list;
-      _companyController.clear();
-      _customerController.clear();
-      _driverController.clear();
-      _qtyController.text = '1';
-      _orderValueController.clear();
-      _coController.clear();
-      _driverValueController.clear();
-      _locationController.clear();
-      _noteController.clear();
+      _resetForm();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ Order Express بنجاح')),
+      SnackBar(
+        content: Text(_editingId == null
+            ? 'تم حفظ Order Express بنجاح'
+            : 'تم تحديث Order Express بنجاح'),
+      ),
     );
+  }
+
+  void _editRecord(OrderExpressRecord record) {
+    setState(() {
+      _editingId = record.id;
+      _selectedDate = record.date;
+      _companyController.text = record.company;
+      _customerController.text = record.customerName;
+      _driverController.text = record.driverName;
+      _qtyController.text = record.qty.toString();
+      _orderValueController.text = record.orderValue.toString();
+      _coController.text = record.co.toString();
+      _driverValueController.text = record.driverValue.toString();
+      _locationController.text = record.location;
+      _noteController.text = record.note;
+    });
   }
 
   Future<void> _deleteRecord(String id) async {
     final updated = _records.where((item) => item.id != id).toList();
     await LocalStorage.saveOrderRecords(updated);
-    setState(() => _records = updated);
+    setState(() {
+      _records = updated;
+      if (_editingId == id) _resetForm();
+    });
   }
 
   @override
@@ -199,13 +256,26 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
                       decoration: const InputDecoration(labelText: 'Note'),
                     ),
                     const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _saveRecord,
-                        icon: const Icon(Icons.save_alt),
-                        label: const Text('حفظ'),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _saveRecord,
+                            icon: Icon(_editingId == null ? Icons.save_alt : Icons.edit),
+                            label: Text(_editingId == null ? 'حفظ' : 'تحديث'),
+                          ),
+                        ),
+                        if (_editingId != null) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _resetForm,
+                              icon: const Icon(Icons.close),
+                              label: const Text('إلغاء'),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -223,22 +293,36 @@ class _OrderExpressScreenState extends State<OrderExpressScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ..._records.map((record) => Card(
+          TextField(
+            decoration: const InputDecoration(
+              labelText: 'بحث',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) => setState(() => _searchQuery = value),
+          ),
+          const SizedBox(height: 12),
+          ...filteredRecords.map((record) => Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   title: Text(record.customerName),
-                  subtitle: Text(
-                    '${record.formattedDate} • ${record.company} • ${record.driverName}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(NumberFormat.currency(symbol: 'SAR ', decimalDigits: 2).format(record.total)),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () => _deleteRecord(record.id),
-                      ),
-                    ],
+                  subtitle: Text('${record.formattedDate} • ${record.company} • ${record.driverName}'),
+                  trailing: SizedBox(
+                    width: 120,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(NumberFormat.currency(symbol: 'SAR ', decimalDigits: 2).format(record.total)),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                          onPressed: () => _editRecord(record),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteRecord(record.id),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               )),
@@ -269,9 +353,7 @@ class _DateField extends StatelessWidget {
           firstDate: DateTime(2020),
           lastDate: DateTime(2100),
         );
-        if (date != null) {
-          onChanged(date);
-        }
+        if (date != null) onChanged(date);
       },
       child: InputDecorator(
         decoration: InputDecoration(labelText: label),
